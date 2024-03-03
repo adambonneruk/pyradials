@@ -1,207 +1,229 @@
-'''loads and instrument .GSI file into a well-formatted dictionary'''
-import logging, re
+import logging, sys, pathlib, re, json
 from textwrap import wrap
+from datetime import datetime
+from calculations import mm_to_m, dms_to_decimal
 
-def load_gsi(file_name:str, bit_depth:int):
-	logging.debug("loading file: " + file_name + ", with bit depth: " + str(bit_depth))
+DEBUG_MODE = True
+if DEBUG_MODE:
+	logging.basicConfig(format='%(message)s', level=logging.INFO)
 
-	match bit_depth:
-		case 8: word_size:int = 12 # need to verify
-		case 16: word_size:int = 24
-		case _: None
+def filename_details(fn: str):
+	''' returns lowercase stem and ext for a given filepath '''
+	stem: str = str(pathlib.Path(fn).stem)
+	suffix: str = str(pathlib.Path(fn).suffix)
 
-	# open the file, and load up an array of dicts called observation
-	with open(file_name, 'r') as lidf16:
+	return stem.lower(), suffix.lower()
 
-		# create array of blocks for each line in the lidf16
-		lidf16_block = lidf16.readlines()
-		logging.debug(str(lidf16_block[0:2][0:80]) + "\n")
+def import_leica_gsi_file(full_fn: str, export_json: bool = False, gsi_bit_depth: int = 16):
+	'''open a .gsi file and load into dictionary, optionally dump json of raw data'''
+	source = {}  # Create Dictionary for this .GSI Source
+	source['filename'] = '%s%s' % (filename_details(full_fn))
+	source['process_datetime'] = str(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+	source['format'] = 'Leica Geosystems %d-bit GSI (Geo Serial Interface)' % gsi_bit_depth
 
-		# remove \n given by the readlines() function
-		lidf16_block = [text.rstrip() for text in lidf16_block]
-		logging.debug(str(lidf16_block[0:2][0:80]) + "\n")
+	with open(full_fn, 'r') as leica_gsi:
+		leica_gsi_block = [text.rstrip() for text in leica_gsi.readlines()]
 
-		# count the number of lines/blocks
-		lidf16_block_count:int = len(lidf16_block)
-		logging.debug("block count: "+ str(lidf16_block_count))
+	logging.debug(str(leica_gsi_block[0:2][0:80]) + "\n") # 80 chars of top 2 lines
+	parsed_leica_gsi_block = [dict() for _ in leica_gsi_block]
 
-		# create dictionary to store the observations
-		observation_details = {
-			'type': None, 'code': None, 'block': None, 'shot': None,
-			'target_height': None, 'instrument_height': None,
-			'backsight': None, 'hz_angle': None, 'vt_angle': None,
-			'slope_dist': None, 'serial_number': None, 'date_time': None,
-			'easting': None, 'northing': None, 'elevation': None,
-			'is_setup_flag': False,	'raw_data': None
-		}
+	word_size: int = 0
+	trim_16bit_prefix: bool = False
 
-		# create array of observation_details, 1 for each block in lidf16
-		observation = [dict(observation_details) for _ in lidf16_block]
+	match gsi_bit_depth:
+		case 8:
+			word_size: int = 12
+		case 16:
+			word_size: int = 24
+			trim_16bit_prefix = True
+			logging.debug('word size:%d, trim * prefix: %r' % (word_size, trim_16bit_prefix))
+		case _:
+			raise Exception('Unknown File Type: Leica .GSI Incorrect Bit-depth')
 
-		# for each block, do:
-		for i, lidf16_block in enumerate(lidf16_block, start=0):
+	for i, leica_gsi_block in enumerate(leica_gsi_block, start=0):
+		leica_gsi_word = wrap(leica_gsi_block, word_size)
 
-			# chunk up the [lidf16_words]s in the [lidf16_block]s by word_size
-			lidf16_word = wrap(lidf16_block,word_size) #.split() errors on spaces
+		# trim the '*' from first word
+		leica_gsi_word[0] = leica_gsi_word[0][1:]
 
-			# create temp datetime varibles for string extraction
-			year:str = None; month:str = None; day:str = None
-			hour:str = None; min:str = None; sec:str = None; ms:str = None
-
-			# for each lidf16_word word, do:
-			for word in lidf16_word:
-
-						# remove * prefix character for 16-bit .gsi files
-				if word_size == 24 and word[0] == '*':
-					word = word[1:]
-
-				# format + copy word into the correct observation value
-				match int(word[:2]):
-
-					case 11: # point number (includes block number)
-						observation[i]['block'] = re.sub(r'^0+',r'',word[2:6])
-						observation[i]['shot'] = re.sub(r'^0+',r'',word[7:])
-						observation[i]['type'] = 'point'
-
-					case 12: # instrument serial number
-						observation[i]['serial_number'] = re.sub(r'^0+',r'',word[7:])
-
-					case 18: # time format 1: YYSSsss
-						year = "20" + word[-8:-6]
-						sec = word[-6:-4]
-						ms = word[-4:-1]
-
-					case 19: # time format 2: MMDDHHmm
-						month = word[-8:-6]
-						day = word[-6:-4]
-						hour = word[-4:-2]
-						min = word[-2:]
-
-					case 21: # horizontal circle (Hz)
-						observation[i]['hz_angle'] = int(re.sub(r'^0+',r'',word[7:]))
-
-					case 22: # vertical angle (V)
-						observation[i]['vt_angle'] = int(re.sub(r'^0+',r'',word[7:]))
-
-					case 31: # slope distance
-						observation[i]['slope_dist'] = int(re.sub(r'^0+',r'',word[7:]))
-
-					case 41: # code number (includes block number)
-						observation[i]['block'] = re.sub(r'^0+',r'',word[2:6])
-						observation[i]['code'] = re.sub(r'^0+',r'',word[7:])
-						observation[i]['type'] = 'code'
-
-					case 45:
-						observation[i]['shot'] = re.sub(r'^0+',r'',word[7:])
-
-					case 79: # Attrib 8
-						observation[i]['backsight'] = re.sub(r'^0+',r'',word[7:])
-
-					case 81: # Easting (target)
-						zero_safe_word = 0
-						if re.sub(r'^0+',r'',word[7:]) != '':
-							zero_safe_word = int(re.sub(r'^0+',r'',word[7:]))
-						observation[i]['easting'] = zero_safe_word
-
-					case 82: # Northing (target)
-						zero_safe_word = 0
-						if re.sub(r'^0+',r'',word[7:]) != '':
-							zero_safe_word = int(re.sub(r'^0+',r'',word[7:]))
-						observation[i]['northing'] = zero_safe_word
-
-					case 83: # Elevation (target)
-						zero_safe_word = 0
-						if re.sub(r'^0+',r'',word[7:]) != '':
-							zero_safe_word = int(re.sub(r'^0+',r'',word[7:]))
-						observation[i]['elevation'] = zero_safe_word
-
-					case 84: # Station Easting (Eo)
-						observation[i]['is_setup_flag'] = True # Make this specific block a setup
-						zero_safe_word = 0
-						if re.sub(r'^0+',r'',word[7:]) != '':
-							zero_safe_word = int(re.sub(r'^0+',r'',word[7:]))
-						observation[i]['easting'] = zero_safe_word
-
-					case 85: # Station Northing (No)
-						zero_safe_word = 0
-						if re.sub(r'^0+',r'',word[7:]) != '':
-							zero_safe_word = int(re.sub(r'^0+',r'',word[7:]))
-						observation[i]['northing'] = zero_safe_word
-
-					case 86: # Station Elevation (Ho)
-						zero_safe_word = 0
-						if re.sub(r'^0+',r'',word[7:]) != '':
-							zero_safe_word = int(re.sub(r'^0+',r'',word[7:]))
-						observation[i]['elevation'] = zero_safe_word
-
-					case 87: # Reflector height (above ground)
-						zero_safe_word = 0
-						if re.sub(r'^0+',r'',word[7:]) != '':
-							zero_safe_word = int(re.sub(r'^0+',r'',word[7:]))
-						observation[i]['target_height'] = zero_safe_word
-
-					case 88: # Instrument height (above ground)
-						observation[i]['instrument_height'] = int(re.sub(r'^0+',r'',word[7:]))
-
-			# check for setup flag and set type to station
-			if observation[i]['is_setup_flag']:
-				observation[i]['type']='setup'
-
-			observation[i]['date_time'] = (
+		for word in leica_gsi_word:
+			match int(word[:2]):
+				case 11: # point number (includes block number)
+					parsed_leica_gsi_block[i]['block'] = re.sub(
+						r'^0+', r'', word[2:6])
+					parsed_leica_gsi_block[i]['shot'] = re.sub(
+						r'^0+', r'', word[7:])
+					parsed_leica_gsi_block[i]['type'] = 'point'
+				case 12: # instrument serial number
+					parsed_leica_gsi_block[i]['serial_number'] = re.sub(
+						r'^0+', r'', word[7:])
+					source['instrument_serial_number'] = parsed_leica_gsi_block[i]['serial_number']
+				case 18: # time format 1: YYSSsss
+					year = "20" + word[-8:-6]
+					sec = word[-6:-4]
+					# ms = word[-4:-1] # ms seems to always be .000
+				case 19: # time format 2: MMDDHHmm
+					month = word[-8:-6]
+					day = word[-6:-4]
+					hour = word[-4:-2]
+					min = word[-2:]
+				case 21: # horizontal circle (Hz)
+					parsed_leica_gsi_block[i]['Hz'] = int(
+						re.sub(r'^0+', r'', word[7:]))
+				case 22: # vertical angle (V)
+					parsed_leica_gsi_block[i]['V'] = int(
+						re.sub(r'^0+', r'', word[7:]))
+				case 31: # slope distance (SD)
+					parsed_leica_gsi_block[i]['Sd'] = int(
+						re.sub(r'^0+', r'', word[7:]))
+				case 41: # code number (includes block number)
+					parsed_leica_gsi_block[i]['block'] = re.sub(
+						r'^0+', r'', word[2:6])
+					parsed_leica_gsi_block[i]['code'] = re.sub(
+						r'^0+', r'', word[7:])
+					parsed_leica_gsi_block[i]['type'] = 'code'
+				case 43:
+					parsed_leica_gsi_block[i]['shot'] = re.sub(
+						r'^0+', r'', word[7:])
+				case 45:
+					parsed_leica_gsi_block[i]['shot'] = re.sub(
+						r'^0+', r'', word[7:])
+				case 79: # Attrib 8
+					parsed_leica_gsi_block[i]['backsight'] = re.sub(
+						r'^0+', r'', word[7:])
+				case 81: # Easting (target)
+					zero_safe_word = 0
+					if re.sub(r'^0+', r'', word[7:]) != '':
+						zero_safe_word = int(re.sub(r'^0+', r'', word[7:]))
+					parsed_leica_gsi_block[i]['Et'] = zero_safe_word
+				case 82: # Northing (target)
+					zero_safe_word = 0
+					if re.sub(r'^0+', r'', word[7:]) != '':
+						zero_safe_word = int(re.sub(r'^0+', r'', word[7:]))
+					parsed_leica_gsi_block[i]['Nt'] = zero_safe_word
+				case 83: # Elevation (target)
+					zero_safe_word = 0
+					if re.sub(r'^0+', r'', word[7:]) != '':
+						zero_safe_word = int(re.sub(r'^0+', r'', word[7:]))
+					parsed_leica_gsi_block[i]['Et'] = zero_safe_word
+				case 84: # Station Easting (Eo)
+					parsed_leica_gsi_block[i]['type'] = 'setup' # Make this specific block a setup
+					zero_safe_word = 0
+					if re.sub(r'^0+', r'', word[7:]) != '':
+						zero_safe_word = int(re.sub(r'^0+', r'', word[7:]))
+					parsed_leica_gsi_block[i]['Eo'] = zero_safe_word
+				case 85: # Station Northing (No)
+					zero_safe_word = 0
+					if re.sub(r'^0+', r'', word[7:]) != '':
+						zero_safe_word = int(re.sub(r'^0+', r'', word[7:]))
+					parsed_leica_gsi_block[i]['No'] = zero_safe_word
+				case 86: # Station Elevation (Ho)
+					zero_safe_word = 0
+					if re.sub(r'^0+', r'', word[7:]) != '':
+						zero_safe_word = int(re.sub(r'^0+', r'', word[7:]))
+					parsed_leica_gsi_block[i]['Ho'] = zero_safe_word
+				case 87: # Reflector height (above ground)
+					zero_safe_word = 0
+					if re.sub(r'^0+', r'', word[7:]) != '':
+						zero_safe_word = int(re.sub(r'^0+', r'', word[7:]))
+					parsed_leica_gsi_block[i]['Rh'] = zero_safe_word
+				case 88: # Instrument height (above ground)
+					parsed_leica_gsi_block[i]['Ih'] = int(
+						re.sub(r'^0+', r'', word[7:]))
+		try:
+			parsed_leica_gsi_block[i]['date_time'] = (
 				str(year) + "-" + str(month) + "-" + str(day)
-				+ " " + str(hour) + ":" + str(min) + ":" + str(sec) + "." + str(ms)
+				+ " " + str(hour) + ":" + str(min) + ":" + str(sec)
 			)
+			source['capture_datetime'] = parsed_leica_gsi_block[i]['date_time']
+		except:
+			logging.debug("this particular block doesn't have datetime info")
 
-			# grab the entire block as a text string (for debugging)
-			observation[i]['raw_data'] = lidf16_word
+		# store the block-word array as raw
+		parsed_leica_gsi_block[i]['raw'] = leica_gsi_word
 
-	for o in observation:
-		logging.debug("\n" + str(o))
+		# json export
+		if export_json:
+			with open(pathlib.Path(full_fn).with_suffix('.json'), "w") as write_file:
+				write_file.write(json.dumps(parsed_leica_gsi_block) + "\n")
 
-	# design the data structure for the instrument data/setup/code/point
-	instrument_data = []
-	setup = {
-		'station': None, 'backsight': None,
-		'instrument_height': None, 'target_height': None,
-		'easting': None, 'northing': None, 'elevation': None,
-		'raw_data': None, 'radials': []
-	}
+	# the leica_gsi is now parsed_leica_gsi, lets grab the relevant data for source{}
+	source['observation'] = []
+	for parsed_block_value in parsed_leica_gsi_block:
+		match parsed_block_value['type']:
+			case 'setup':
+				# put a dictionary in the observation array for a setup, then populate with setup details
+				source['observation'].append(dict())
+				source['observation'][-1]['station'] = parsed_block_value.get('shot')
+				source['observation'][-1]['backsight'] = parsed_block_value.get('backsight')
+				source['observation'][-1]['instrument_height'] = mm_to_m(parsed_block_value.get('Ih'))
+				source['observation'][-1]['target_height'] = mm_to_m(parsed_block_value.get('Rh'))
+				source['observation'][-1]['station_easting'] = mm_to_m(parsed_block_value.get('Eo'))
+				source['observation'][-1]['station_northing'] = mm_to_m(parsed_block_value.get('No'))
+				source['observation'][-1]['station_elevation'] = mm_to_m(parsed_block_value.get('Ho'))
+				source['observation'][-1]['shot'] = []
 
-	# parse through observation array, creating generic instrument_data
-	for parsed_block in observation:
+			case 'code':
+				most_recent_code: str = parsed_block_value.get('code')
+				if parsed_block_value.get('shot') != '':
+					most_recent_comma_code: str = parsed_block_value.get(
+						'shot')
+				else:
+					most_recent_comma_code = None
 
-		if parsed_block['type'] == 'setup': # is it a station setup?
+			case 'point':
+				# derive the full comma-code
+				if most_recent_comma_code:
+					current_code = str(most_recent_code + "," + most_recent_comma_code)
+				else:
+					current_code = most_recent_code
 
-			# add a new setup to the instrument_data
-			instrument_data.append(dict(setup))
+				# built the tuple
+				source['observation'][-1]['shot'].append(tuple(( # shot_number,radius,inclination,azimuth,target_height,code
+					parsed_block_value.get('shot'),					 # Shot = Point Number
+					mm_to_m(parsed_block_value.get('Sd')),			  # Radius = Slope Distance
+					dms_to_decimal(str(parsed_block_value.get('V'))),   # Inclination = Vertical Angle
+					dms_to_decimal(str(parsed_block_value.get('Hz'))),  # Azimuth = Horizontal Angle
+					mm_to_m(parsed_block_value.get('Rh')),			  # Target Height = Reflector Height
+					current_code)))									 # Code = Codelist Code, Comma Code
 
-			# populate the data from the parsed block setup
-			instrument_data[-1]['station'] = parsed_block['shot']
-			instrument_data[-1]['backsight'] = parsed_block['backsight']
-			instrument_data[-1]['instrument_height'] = parsed_block['instrument_height']
-			instrument_data[-1]['target_height'] = parsed_block['target_height']
-			instrument_data[-1]['easting'] = parsed_block['easting']
-			instrument_data[-1]['northing'] = parsed_block['northing']
-			instrument_data[-1]['elevation'] = parsed_block['elevation']
-			instrument_data[-1]['raw_data'] = parsed_block['raw_data']
+			case _:
+				raise Exception('Not a Setup, Code or Point')
 
-		elif parsed_block['type'] == 'code': # or is it a code?
+def import_instrument_file(full_fn: str, export_json: bool = False):
+	'''with a given fn, check compatibility/support and load the file into memory'''
 
-			# store the code in memory, so we can use it afterwards in the loop
-			most_recent_code = parsed_block['code']
-			most_recent_sub_code = parsed_block['shot']
+	stem, suffix = filename_details(full_fn)
 
-		else: # else it's a point/line/circle etc., copy the parsed block
+	match suffix:
+		case ".gsi":  # Leica TPS 1100/1200 Series 8/16-bit Data
+			# open file, read first line to determine bit-depth
+			with open(full_fn, 'r') as leica_gsi_file:
+				first_line = leica_gsi_file.readline().strip('\n')
 
-			# append the measurement, grab the code from earlier loop run
-			instrument_data[-1]['radials'].append(parsed_block)
-			instrument_data[-1]['radials'][-1]['code'] = most_recent_code
+			# * in first position equals 16-bit
+			if first_line[0] == '*':
+				gsi_bit_depth = 16
+				something = import_leica_gsi_file(
+					full_fn, export_json, gsi_bit_depth)
+			else:
+				gsi_bit_depth = 8
+				raise Exception('8-bit Leica .GSI Not Supported')
 
-			# some codes need custom sub-codes that allow us to label the drawing or pass params
-			if most_recent_code == 'Z':
-				instrument_data[-1]['radials'][-1]['code'] = (
-					most_recent_code +","
-					+ most_recent_sub_code
-				)
+		case "r25":  # Carlson RW5
+			raise Exception('Carlson RW5 Not Supported')
 
-	return instrument_data
+		case "raw":  # Trimble 1
+			raise Exception('Trimble RAW Not Supported')
+
+		case "are":  # Trimble 1
+			raise Exception('Trimble ARE Not Supported')
+
+		case _:
+			raise Exception('Unknown File Type')
+
+	# output the opened parsed instrument file
+	return something
+
+full_fn = sys.argv[1]
+source = import_instrument_file(full_fn)
