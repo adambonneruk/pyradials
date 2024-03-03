@@ -1,7 +1,7 @@
 import logging, sys, pathlib, re, json
 from textwrap import wrap
 from datetime import datetime
-from math_functions import mm_to_m, dms_to_decimal
+from calc import mm_to_m, dms_to_decimal
 
 DEBUG_MODE = True
 if DEBUG_MODE:

@@ -1,8 +1,8 @@
 import logging, sys, os
 from tabulate import tabulate
-from cli_functions import banner, draw_nice_line
-from open_instrument_file import import_instrument_file
-from math_functions import pad_decimal, spherical_to_cartesian, dms_to_decimal
+from cli import banner, draw_nice_line
+from instrument import import_instrument_file
+from calc import pad_decimal, spherical_to_cartesian, dms_to_decimal
 
 DEBUG_MODE = True
 if DEBUG_MODE:
