@@ -1,7 +1,7 @@
 import logging, sys, pathlib, re, json
 from textwrap import wrap
 from datetime import datetime
-from calculations import mm_to_m, dms_to_decimal
+from math_functions import mm_to_m, dms_to_decimal
 
 DEBUG_MODE = True
 if DEBUG_MODE:
@@ -148,20 +148,20 @@ def import_leica_gsi_file(full_fn: str, export_json: bool = False, gsi_bit_depth
 				write_file.write(json.dumps(parsed_leica_gsi_block) + "\n")
 
 	# the leica_gsi is now parsed_leica_gsi, lets grab the relevant data for source{}
-	source['observation'] = []
+	source['setup'] = []
 	for parsed_block_value in parsed_leica_gsi_block:
 		match parsed_block_value['type']:
 			case 'setup':
 				# put a dictionary in the observation array for a setup, then populate with setup details
-				source['observation'].append(dict())
-				source['observation'][-1]['station'] = parsed_block_value.get('shot')
-				source['observation'][-1]['backsight'] = parsed_block_value.get('backsight')
-				source['observation'][-1]['instrument_height'] = mm_to_m(parsed_block_value.get('Ih'))
-				source['observation'][-1]['target_height'] = mm_to_m(parsed_block_value.get('Rh'))
-				source['observation'][-1]['station_easting'] = mm_to_m(parsed_block_value.get('Eo'))
-				source['observation'][-1]['station_northing'] = mm_to_m(parsed_block_value.get('No'))
-				source['observation'][-1]['station_elevation'] = mm_to_m(parsed_block_value.get('Ho'))
-				source['observation'][-1]['shot'] = []
+				source['setup'].append(dict())
+				source['setup'][-1]['station'] = parsed_block_value.get('shot')
+				source['setup'][-1]['backsight'] = parsed_block_value.get('backsight')
+				source['setup'][-1]['instrument_height'] = mm_to_m(parsed_block_value.get('Ih'))
+				source['setup'][-1]['target_height'] = mm_to_m(parsed_block_value.get('Rh'))
+				source['setup'][-1]['station_easting'] = mm_to_m(parsed_block_value.get('Eo'))
+				source['setup'][-1]['station_northing'] = mm_to_m(parsed_block_value.get('No'))
+				source['setup'][-1]['station_elevation'] = mm_to_m(parsed_block_value.get('Ho'))
+				source['setup'][-1]['shot'] = []
 
 			case 'code':
 				most_recent_code: str = parsed_block_value.get('code')
@@ -179,16 +179,19 @@ def import_leica_gsi_file(full_fn: str, export_json: bool = False, gsi_bit_depth
 					current_code = most_recent_code
 
 				# built the tuple
-				source['observation'][-1]['shot'].append(tuple(( # shot_number,radius,inclination,azimuth,target_height,code
-					parsed_block_value.get('shot'),					 # Shot = Point Number
-					mm_to_m(parsed_block_value.get('Sd')),			  # Radius = Slope Distance
-					dms_to_decimal(str(parsed_block_value.get('V'))),   # Inclination = Vertical Angle
-					dms_to_decimal(str(parsed_block_value.get('Hz'))),  # Azimuth = Horizontal Angle
-					mm_to_m(parsed_block_value.get('Rh')),			  # Target Height = Reflector Height
-					current_code)))									 # Code = Codelist Code, Comma Code
+				source['setup'][-1]['shot'].append(tuple((
+					parsed_block_value.get('shot'),						# Shot = Point Number
+					current_code,										# Code = Codelist Code, Comma Code
+					mm_to_m(parsed_block_value.get('Sd')),				# Radius = Slope Distance
+					dms_to_decimal(str(parsed_block_value.get('V'))),	# Inclination = Vertical Angle
+					dms_to_decimal(str(parsed_block_value.get('Hz'))),	# Azimuth = Horizontal Angle
+					mm_to_m(parsed_block_value.get('Rh'))				# Target Height = Reflector Height
+				)))
 
 			case _:
 				raise Exception('Not a Setup, Code or Point')
+
+	return source
 
 def import_instrument_file(full_fn: str, export_json: bool = False):
 	'''with a given fn, check compatibility/support and load the file into memory'''
