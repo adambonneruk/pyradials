@@ -32,6 +32,14 @@ Instruction Steps for All Other Stations
 3.
 ```
 
+##### Reflectorless Stickers for Internals
+
+<img alt="unique's project icon" align="right" width="200px" src="docs/images/battery-labels.png" />
+
+As a measured-building / floorplan surveyor, often the accuracy demands of such layouts meant traversing with a reflector wasn't required as was often cumbersome. This solution includes simple 20mm stickers in Dymo Label v8.5.0.1751 (2013) format stored in the [```docs/labels```](docs/labels/)  folder.
+
+These labels can be stuck directly to the total station battery (illustration: right) and used as a quick and easy 20mm tall target inside. I recommend putting one on each battery so you always have a target available!
+
 ## Build and Compile PyRadials (for Developers)
 
 ### Python Virtual Environment
@@ -96,16 +104,20 @@ The following organisations, projects, and people helped make PyRadials happen, 
 > __note__: that by clicking on external links provided on this readme, you are leaving our project. We do not endorse or take responsibility for the content, privacy practices, or any other aspect of external sites. Proceed at your own discretion.
 
 ### Software used for Development
-- The [NSIS](https://nsis.sourceforge.io/Main_Page) Project for Windows Installer creation: 
+- The [NSIS](https://nsis.sourceforge.io/Main_Page) Project for Windows Installer creation:
 - [Paint.net](https://getpaint.net/) for Image editing
 - [IcoFx Portable](https://portableapps.com/apps/graphics_pictures/icofx_portable) for Icon file editing
+- [Dymo Label](https://download.dymo.com/dymo/Software/Win/DLS8Setup.8.5.4.exe) v8
+- 
 
 ### Hardware Documentation
 - [Manuals for Leica Total Stations](https://tmackinnon.com/manuals-for-the-leica-tps1200-and-tcr1105.php)
+- [Dymo Label v8 Usage](https://help.dymo.com/s/article/How-to-use-DYMO-Label-Software-v-8?language=en_US)
 - 
 
 ### Further Reading
 - 
 
 ### Reference Articles
+- Gitea Error: [RPC failed; curl 56 Recv failure](https://stackoverflow.com/questions/75525749/how-to-fix-this-error-rpc-failed-curl-56-recv-failure-connection-was-reset)
 - 
