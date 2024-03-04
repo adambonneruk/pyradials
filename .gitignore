@@ -8,6 +8,7 @@ docs/
 instrument/
 pyradials/research/
 sample_data/
+software/
 tools/
 
 # NSIS Installer
