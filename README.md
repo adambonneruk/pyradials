@@ -3,6 +3,23 @@ Measure, Traverse, Resection, Control, Convert and Create .DXF for Leica TPS1100
 
 ## Introduction
 
+### Mathematical Terminology
+
+| symbol | physics name | other name       | instrument name  | notes                                   |
+| :----: | ------------ | ---------------- | ---------------- | --------------------------------------- |
+|   r    | radius       | radial distance  | slope distance   | m                                       |
+|   θ    | theta        | inclination      | vertical angle   | 0 = zenith / top; 90 = forward          |
+|   φ    | azimuth      | horizontal angle | horizontal angle | azimuth = (90 - horizontal_angle) % 360 |
+
+Switching between Survey and Physics terms is tough, this table serves as a handy reference. The biggest stumbling block during development of the spherical-to-cartesian mathematics was noticing the azimuth and horizontal angle are not the same.
+
+An azimuth (φ) is commonly defined as pointing along the positive x-axis. Thus, azimuth 0 points in the direction of the positive x-axis (in survey terms "East"; whereas the Total Station typically points towards relative "North"/"forwards" when at 0°00'00").
+
+A function (```horizontal_to_azimuth()```) to convert horizontal angle to azimuth is in the [```calc.py```](pyradials/calc.py) source code file
+
+
+
+
 ## Installing and using PyRadials (for Users)
 
 ### Instrument / Total Station Setup and Configuration
@@ -34,9 +51,9 @@ Instruction Steps for All Other Stations
 
 ##### Reflectorless Stickers for Internals
 
-<img alt="unique's project icon" align="right" width="200px" src="docs/images/battery-labels.png" />
+<img alt="Two Leica TPS 1100 Batteries with Accurate Target Stickers" align="right" width="200px" src="docs/images/battery-labels.png" />
 
-As a measured-building / floorplan surveyor, often the accuracy demands of such layouts meant traversing with a reflector wasn't required as was often cumbersome. This solution includes simple 20mm stickers in Dymo Label v8.5.0.1751 (2013) format stored in the [```docs/labels```](docs/labels/)  folder.
+As a measured-building / floorplan surveyor, often the accuracy demands of such layouts meant traversing with a reflector wasn't required as was often cumbersome. This solution includes simple 20mm stickers in Dymo Label v8.5.0.1751 (2013) format stored in the [```labels```](docs/labels/)  folder.
 
 These labels can be stuck directly to the total station battery (illustration: right) and used as a quick and easy 20mm tall target inside. I recommend putting one on each battery so you always have a target available!
 

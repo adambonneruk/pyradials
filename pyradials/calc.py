@@ -87,6 +87,15 @@ def cartesian_to_spherical(coord1, coord2):
     return radius, inclination, azimuth
 
 def horizontal_to_azimuth(horizontal_angle):
+    ''' the angle measured from a reference direction, commonly defined as pointing
+        along the positive x-axis. Thus, azimuth 0 points in the direction of the
+        positive x-axis
+
+        - An azimuth of 0 degrees points in the direction of the positive x-axis.
+        - An azimuth of 90 degrees points in the direction of the positive y-axis.
+        - An azimuth of 180 degrees points in the direction of the negative x-axis.
+		- An azimuth of 270 degrees points in the direction of the negative y-axis.
+    '''
     # Ensure the angle is within 0 to 360 degrees range
     horizontal_angle %= 360
 
