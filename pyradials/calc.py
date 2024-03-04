@@ -36,23 +36,63 @@ def pad_decimal(decimal):
     padded_decimal = format(decimal, '08.3f')
     return padded_decimal
 
-def spherical_to_cartesian(radius, inclination, azimuth, observer_x=0, observer_y=0, observer_z=0, instrument_height=0, target_height=0):
+def spherical_to_cartesian(radius, inclination, azimuth, origin = (0,0,0)):
     # Convert degrees to radians
-    inclination = math.radians(inclination)
-    azimuth = math.radians(azimuth)
+    inclination_rad = math.radians(inclination)
+    azimuth_rad = math.radians(azimuth)
 
     # Calculate Cartesian coordinates
-    y = observer_y + (radius * math.sin(inclination) * math.cos(azimuth))
-    x = observer_x + (radius * math.sin(inclination) * math.sin(azimuth))
-    z = observer_z + (radius * math.cos(inclination))
-
-    # Adjust for instrument height and target height
-    z += instrument_height
-    z -= target_height
-
-    # Round off each coordinate result to 3 decimal places
-    x = round(x, 3)
-    y = round(y, 3)
-    z = round(z, 3)
+    x = origin[0] + radius * math.sin(inclination_rad) * math.cos(azimuth_rad)
+    y = origin[1] + radius * math.sin(inclination_rad) * math.sin(azimuth_rad)
+    z = origin[2] + radius * math.cos(inclination_rad)
 
     return x, y, z
+
+def cartesian_to_spherical(coord1, coord2):
+    x1, y1, z1 = coord1
+    x2, y2, z2 = coord2
+
+    # Calculate differences in coordinates
+    dx = x2 - x1
+    dy = y2 - y1
+    dz = z2 - z1
+
+    # Calculate radius
+    radius = math.sqrt(dx**2 + dy**2 + dz**2)
+
+    # Calculate inclination (theta)
+    if dx == 0 and dy == 0:
+        if dz > 0:
+            inclination = 90.0
+        elif dz < 0:
+            inclination = -90.0
+        else:
+            inclination = 0.0
+    else:
+        inclination = math.degrees(math.atan2(math.sqrt(dx**2 + dy**2), dz))
+
+    # Calculate azimuth (phi)
+    if dx == 0:
+        if dy > 0:
+            azimuth = 90.0
+        elif dy < 0:
+            azimuth = -90.0
+        else:
+            azimuth = 0.0
+    else:
+        azimuth = math.degrees(math.atan2(dy, dx))
+        if azimuth < 0:
+            azimuth += 360.0
+
+    return radius, inclination, azimuth
+
+def horizontal_to_azimuth(horizontal_angle):
+    # Ensure the angle is within 0 to 360 degrees range
+    horizontal_angle %= 360
+
+    # Azimuth is 90 degrees minus horizontal angle
+    azimuth = (90 - horizontal_angle) % 360
+
+    return azimuth
+
+

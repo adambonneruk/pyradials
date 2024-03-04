@@ -1,11 +1,8 @@
+'''opens instrument file and parses them into a tidy dict'''
 import logging, sys, pathlib, re, json
 from textwrap import wrap
 from datetime import datetime
 from calc import mm_to_m, dms_to_decimal
-
-DEBUG_MODE = True
-if DEBUG_MODE:
-	logging.basicConfig(format='%(message)s', level=logging.INFO)
 
 def filename_details(fn: str):
 	''' returns lowercase stem and ext for a given filepath '''
@@ -14,7 +11,7 @@ def filename_details(fn: str):
 
 	return stem.lower(), suffix.lower()
 
-def import_leica_gsi_file(full_fn: str, export_json: bool = False, gsi_bit_depth: int = 16):
+def leica_gsi_file(full_fn: str, export_json: bool = False, gsi_bit_depth: int = 16):
 	'''open a .gsi file and load into dictionary, optionally dump json of raw data'''
 	source = {}  # Create Dictionary for this .GSI Source
 	source['filename'] = '%s%s' % (filename_details(full_fn))
@@ -193,7 +190,7 @@ def import_leica_gsi_file(full_fn: str, export_json: bool = False, gsi_bit_depth
 
 	return source
 
-def import_instrument_file(full_fn: str, export_json: bool = False):
+def instrument_file(full_fn: str, export_json: bool = False):
 	'''with a given fn, check compatibility/support and load the file into memory'''
 
 	stem, suffix = filename_details(full_fn)
@@ -201,14 +198,13 @@ def import_instrument_file(full_fn: str, export_json: bool = False):
 	match suffix:
 		case ".gsi":  # Leica TPS 1100/1200 Series 8/16-bit Data
 			# open file, read first line to determine bit-depth
-			with open(full_fn, 'r') as leica_gsi_file:
-				first_line = leica_gsi_file.readline().strip('\n')
+			with open(full_fn, 'r') as leica_gsi:
+				first_line = leica_gsi.readline().strip('\n')
 
 			# * in first position equals 16-bit
 			if first_line[0] == '*':
 				gsi_bit_depth = 16
-				something = import_leica_gsi_file(
-					full_fn, export_json, gsi_bit_depth)
+				instrument_file = leica_gsi_file(full_fn, export_json, gsi_bit_depth)
 			else:
 				gsi_bit_depth = 8
 				raise Exception('8-bit Leica .GSI Not Supported')
@@ -226,7 +222,4 @@ def import_instrument_file(full_fn: str, export_json: bool = False):
 			raise Exception('Unknown File Type')
 
 	# output the opened parsed instrument file
-	return something
-
-full_fn = sys.argv[1]
-source = import_instrument_file(full_fn)
+	return instrument_file
