@@ -1,0 +1,26 @@
+name: "Pyradials CI"
+
+on:
+  workflow_dispatch: null
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+
+jobs:
+  QA:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.ref }}
+    - name: Setup Pylint
+      run: pip install pylint
+      shell: bash
+    - name: Run Pylint
+      id: checks
+      run: pylint --fail-under=8 $(git ls-files '*.py')
+      shell: bash
