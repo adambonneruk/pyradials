@@ -11,7 +11,7 @@ def filename_details(fn: str):
 
 	return stem.lower(), suffix.lower()
 
-def leica_gsi_file(full_fn: str, export_json: bool = False, gsi_bit_depth: int = 16):
+def leica_gsi_file_to_dict(full_fn: str, gsi_bit_depth: int = 16):
 	'''open a .gsi file and load into dictionary, optionally dump json of raw data'''
 	source = {}  # Create Dictionary for this .GSI Source
 	source['filename'] = '%s%s' % (filename_details(full_fn))
@@ -73,6 +73,8 @@ def leica_gsi_file(full_fn: str, export_json: bool = False, gsi_bit_depth: int =
 				case 31: # slope distance (SD)
 					parsed_leica_gsi_block[i]['Sd'] = int(
 						re.sub(r'^0+', r'', word[7:]))
+				case 32: # flat horizontal distance
+					parsed_leica_gsi_block[i]['flat_h_dist'] = int(re.sub(r'^0+', r'', word[7:]))
 				case 41: # code number (includes block number)
 					parsed_leica_gsi_block[i]['block'] = re.sub(
 						r'^0+', r'', word[2:6])
@@ -139,14 +141,12 @@ def leica_gsi_file(full_fn: str, export_json: bool = False, gsi_bit_depth: int =
 		# store the block-word array as raw
 		parsed_leica_gsi_block[i]['raw'] = leica_gsi_word
 
-		# json export
-		if export_json:
-			with open(pathlib.Path(full_fn).with_suffix('.json'), "w") as write_file:
-				write_file.write(json.dumps(parsed_leica_gsi_block) + "\n")
+	return parsed_leica_gsi_block
 
+def leica_dict_to_radials(leica_dict):
 	# the leica_gsi is now parsed_leica_gsi, lets grab the relevant data for source{}
-	source['setup'] = []
-	for parsed_block_value in parsed_leica_gsi_block:
+	radials = []
+	for parsed_block_value in leica_dict:
 		match parsed_block_value['type']:
 			case 'setup':
 				# put a dictionary in the observation array for a setup, then populate with setup details
@@ -169,11 +169,17 @@ def leica_gsi_file(full_fn: str, export_json: bool = False, gsi_bit_depth: int =
 					most_recent_comma_code = None
 
 			case 'point':
+				logging.debug(parsed_block_value)
 				# derive the full comma-code
 				if most_recent_comma_code:
 					current_code = str(most_recent_code + "," + most_recent_comma_code)
 				else:
 					current_code = most_recent_code
+
+				logging.debug(parsed_block_value.get('V'))
+				logging.debug(parsed_block_value.get('shot'))
+				logging.debug(current_code)
+				logging.debug(parsed_block_value.get('Sd'))
 
 				# built the tuple
 				source['setup'][-1]['shot'].append(tuple((
@@ -187,8 +193,6 @@ def leica_gsi_file(full_fn: str, export_json: bool = False, gsi_bit_depth: int =
 
 			case _:
 				raise Exception('Not a Setup, Code or Point')
-
-	return source
 
 def instrument_file(full_fn: str, export_json: bool = False):
 	'''with a given fn, check compatibility/support and load the file into memory'''
@@ -204,7 +208,13 @@ def instrument_file(full_fn: str, export_json: bool = False):
 			# * in first position equals 16-bit
 			if first_line[0] == '*':
 				gsi_bit_depth = 16
-				instrument_file = leica_gsi_file(full_fn, export_json, gsi_bit_depth)
+				leica_dict = leica_gsi_file_to_dict(full_fn, gsi_bit_depth)
+				#source = leica_dict_to_radials(leica_dict)
+
+			# json export
+			if export_json:
+				with open(pathlib.Path(full_fn).with_suffix('.json'), "w") as write_file:
+					write_file.write(json.dumps(leica_dict) + "\n")
 			else:
 				gsi_bit_depth = 8
 				raise Exception('8-bit Leica .GSI Not Supported')
@@ -222,4 +232,4 @@ def instrument_file(full_fn: str, export_json: bool = False):
 			raise Exception('Unknown File Type')
 
 	# output the opened parsed instrument file
-	return instrument_file
+	return leica_dict
