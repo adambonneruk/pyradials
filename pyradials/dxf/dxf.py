@@ -50,7 +50,7 @@ code_properties = {
 		"WT":["kitchen_furniture","line","WT"] #guess for worktop
 	}
 
-def code_property(instrument_code:str, property:str) -> str:
+def code_property(instrument_code:str, property:str, attrib:str = None) -> str:
 	if instrument_code in code_properties:
 		layer, type, label =  code_properties.get(instrument_code)
 		match property:
@@ -58,11 +58,12 @@ def code_property(instrument_code:str, property:str) -> str:
 			case "type": return type
 			case "label": return label
 
-	elif instrument_code[0] == "Z": # special case for Z as we want to pass through the comma detail
+	elif instrument_code == "Z": # special case for Z as we want to pass through the comma detail
+		print("found a z with an attrib of %s" % attrib)
 		match property:
 			case "layer": return 0
 			case "type": return "point"
-			case "label": return instrument_code[2:]
+			case "label": return attrib
 
 	elif instrument_code[:2] == "RO":
 		match property:
@@ -76,7 +77,7 @@ def code_property(instrument_code:str, property:str) -> str:
 			case "type": return "point"
 			case "label": return instrument_code
 
-def plot_dxf(c_x_y_z:list,scale:int,filename:str) -> None:
+def plot_dxf(c_x_y_z:list,stations:list,scale:int,filename:str) -> None:
 	'''pass in coded x, y, and z, coordinates, the drawing scale and the output filename and this function will produce the dxf'''
 
 	# create the dxf document
@@ -128,7 +129,25 @@ def plot_dxf(c_x_y_z:list,scale:int,filename:str) -> None:
 	flag.add_lwpolyline([(0, 0), (0, 5), (5, 3), (0, 3)])  # the flag symbol as 2D polyline
 	flag.add_circle((0, 0), .04)  # mark the base point with a circle
 
+	for name, x, y, z in stations:
+		point = (x, y, z)
+		msp.add_point(point, dxfattribs={'layer': 'control'})
+		text_pos = (x + 0.1, y + 0.0, z)
+		msp.add_text(name, dxfattribs={
+				'height': text_height,
+				'insert': text_pos,
+				"layer": 'control'
+			})
+		msp.add_blockref('FLAG', point, dxfattribs={
+				'xscale': 0.075,
+				'yscale': 0.075,
+				'rotation': 0,
+				"layer": 'control'
+			})
+
 	for pid, code, x, y, z, attrib, sx, sy, sz, ih in c_x_y_z:
+
+		print(c_x_y_z)
 
 		# Add a point at the specified coordinate.
 		point = (x, y, z)
@@ -137,7 +156,7 @@ def plot_dxf(c_x_y_z:list,scale:int,filename:str) -> None:
 		# then add a text label next to the point.
 		if code_property(code, "label") != None:
 			text_pos = (x + 0.1, y + 0.0, z)
-			label = code_property(code, "label")
+			label = code_property(code, "label", attrib)
 			if code_property(code, "type") == "point":
 				text_string = "{}{:.2f}".format(label, z)
 			else:

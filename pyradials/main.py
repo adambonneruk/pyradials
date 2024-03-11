@@ -90,7 +90,10 @@ def main():
 			print_control(control)
 			radials = print_radials(source,control)
 
-			plot_dxf(radials,100,pathlib.Path(argument).with_suffix('.dxf'))
+			stations = [[key, *value] for key, value in control.items()]
+			print(stations)
+
+			plot_dxf(radials,stations,100,pathlib.Path(argument).with_suffix('.dxf'))
 			os.system("start %s " % pathlib.Path(argument).with_suffix('.dxf'))
 
 	# End of Program
