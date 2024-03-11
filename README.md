@@ -133,6 +133,8 @@ The following organisations, projects, and people helped make PyRadials happen, 
 - 
 
 ### Further Reading
+- [Azimuth](https://en.wikipedia.org/wiki/Azimuth) from Wikipedia
+- [Spherical coordinate system](https://en.wikipedia.org/wiki/Spherical_coordinate_system) from Wikipedia
 - 
 
 ### Reference Articles
