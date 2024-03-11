@@ -102,7 +102,7 @@ def gsi_to_blocks_list(fn:str, bit_depth:int = 16, debug_json_output = False) ->
 	# Named Tuples
 	Setup = namedtuple("Setup","type station w84 w85 w86 w88 w79 raw")
 	Code = namedtuple("Code","type code w45 w48 raw")
-	Measurement = namedtuple("Measurement","type point_id w21 w22 w31 w87 date_time raw")
+	Measurement = namedtuple("Measurement","type point_id w21 w22 w31 w87 w81 w82 w83 date_time raw")
 
 	for row in gsi_file_reader:
 		words = wrap(row, word_size)
@@ -146,6 +146,9 @@ def gsi_to_blocks_list(fn:str, bit_depth:int = 16, debug_json_output = False) ->
 				intermediate_dict.get('22'),
 				intermediate_dict.get('31'),
 				intermediate_dict.get('87'),
+				intermediate_dict.get('81'),
+				intermediate_dict.get('82'),
+				intermediate_dict.get('83'),
 				derive_date_time(intermediate_dict.get('18'),intermediate_dict.get('19')),
 				words,
 			)
@@ -162,13 +165,13 @@ def check_integrity_of_setup(setup_block,ro_code_block,ro_measurement) -> None:
 	logging.debug(setup_block)
 
 	if setup_block.type != "setup":
-		raise Exception('gsi does not start with a setup')
+		raise Exception('gsi does not start with a setup' + str(setup_block))
 	if ro_code_block.type != "code":
-		raise Exception('gsi does not follow setup with a RO')
+		raise Exception('gsi does not follow setup with a RO' + str(setup_block))
 	if ro_code_block.code != "RO":
-		raise Exception('code is not RO following setup')
+		raise Exception('code is not RO following setup' + str(setup_block))
 	if ro_measurement.type != "measurement":
-		raise Exception('ro is missing the measurement')
+		raise Exception('ro is missing the measurement' + str(setup_block))
 
 def combine_strings(str1:str , str2:str) -> str:
 	if str1 is not None and str2 is not None:
@@ -184,7 +187,7 @@ def reduce_and_code_measurements(gsi_blocks:list , debug_json_output:bool = Fals
 
 	check_integrity_of_setup(gsi_blocks[0],gsi_blocks[1],gsi_blocks[2])
 	setups_with_coded_measurements = []
-	Coded_Measurement = namedtuple("Coded_Measurement", "point_id code attrib hz vt sd th")
+	Coded_Measurement = namedtuple("Coded_Measurement", "point_id code attrib hz vt sd ea no el th")
 
 	recent_code:str = None
 	recent_attrib:str = None
@@ -215,6 +218,9 @@ def reduce_and_code_measurements(gsi_blocks:list , debug_json_output:bool = Fals
 					dms_to_decimal(str(block.w21)),
 					dms_to_decimal(str(block.w22)),
 					mm_to_m(block.w31),
+					mm_to_m(block.w81),
+					mm_to_m(block.w82),
+					mm_to_m(block.w83),
 					mm_to_m(block.w87)
 				)
 

@@ -29,7 +29,7 @@ def instrument_file_as_source(full_fn:str, debug_json_output:bool = False):
 					'file_name': stem + suffix,
 					'format': 'Leica Geosystems 16-bit GSI (Geo Serial Interface)',
 					'capture_date_time': data[0]['date_time'],
-					'type': 'radials',
+					'type': 'total_station',
 					'data': data,
 				}
 
@@ -43,7 +43,7 @@ def instrument_file_as_source(full_fn:str, debug_json_output:bool = False):
 		case ".raw":  # Trimble 1
 			raise Exception('Trimble RAW Not Supported')
 
-		case ".are":  # Trimble 1
+		case ".are":  # Trimble 2
 			raise Exception('Trimble ARE Not Supported')
 
 		case ".csv": # GPS Survey Data

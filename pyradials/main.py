@@ -1,31 +1,57 @@
-import logging, sys, os
+# default imports
+import logging, sys, os, pathlib
 from tabulate import tabulate
-from cli import banner, draw_nice_line
-from instrument import instrument_file
+from datetime import datetime
+
+# this projects imports
+from cli import banner, draw_nice_line, print_gps, print_coordinates, print_stations, print_radials, print_control
+from instrument import instrument_file_as_source
 from calc import spherical_to_cartesian, dms_to_decimal, cartesian_to_spherical, horizontal_to_azimuth
+from dxf import plot_dxf
 from colour import Colour
 from control import control
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 if DEBUG_MODE:
-	logging.basicConfig(format='%(message)s', level=logging.INFO)
+	logging.basicConfig(format='%(message)s', level=logging.DEBUG)
 
 ''' == PyRadials documentation / Notes ==
 
 -- Instrument Source Format --
 
 	source {
-		'filename': 'example.gsi',
-		'process_datetime': '2024-03-03 01:50:45',
+		'file_name': 'example.gsi',
 		'format': 'Leica Geosystems 16-bit GSI (Geo Serial Interface)',
-		'instrument_serial_number': '626246',
-		'capture_datetime': '2024-03-03 01:50:45',
-		'setup': [
-			station,backsight,instrument_height,station_easting,station_northing,station_elevation,shot[
-				(shot_number,radius,inclination,azimuth,target_height,code)
-				(shot_number,radius,inclination,azimuth,target_height,code)
-				(shot_number,radius,inclination,azimuth,target_height,code)
-			]
+		'capture_date_time': '2024-03-03 01:50:45',
+		'data': [
+			{
+				'station': 'STN1',
+				'easting': 1000.0,
+				'northing': 2000.0,
+				'elevation': 50.0,
+				'height': 1.555,
+				'backsight': 'STN2',
+				'date_time': '2024-03-09 16:53:32',
+				'coded_measurements': [
+					Coded_Measurement(
+						point_id='STN2',
+						code='RO',
+						attrib='STN2',
+						hz=187.161944,
+						vt=94.013611,
+						sd=16.285,
+						th=0.1
+					), Coded_Measurement(
+						point_id=1,
+						code='LS',
+						attrib=None,
+						hz=164.898333,
+						vt=108.121111,
+						sd=4.701,
+						th=0.0
+					)
+				]
+			}
 		]
 	}
 
@@ -43,89 +69,29 @@ if DEBUG_MODE:
 
 def main():
 
+	colour = Colour() # initialise the colour object, this will allow us to print in colour
 	banner()
-	colour = Colour() # initialise a colour object, this will allow us to print in colour
 
 	for argument in sys.argv[1:]:
-		source = instrument_file(argument)
+		source = instrument_file_as_source(argument,True)
 
-		print("filename: %s" % source.get('filename'))
+		print("\nfilename: %s" % source.get('file_name'))
+		print("type: %s" % source.get('type'))
 		print("format: %s" % source.get('format'))
-		print("survey_date: %s" % source.get('capture_datetime'))
+		print("capture_date: %s" % source.get('capture_date_time'))
 		draw_nice_line()
 
-		# Known Stations / Coordinates
-		colour.print("\nKNOWN STATIONS:\nStations Traversed/RTK'd into the system, these are known and can be referenced\n", Colour.LIGHT_MAGENTA)
-		control.insert(0,['Station','Easting','Northing','Elevation'])
-		colour.print(tabulate(control, headers='firstrow', floatfmt='.3f'), Colour.MAGENTA)
+		if source['type'] == 'gps':
+			print_gps(source)
 
-		# Setups
-		colour.print("\nSETUPS:\nSetups are instances of putting the instrument on a station and recording detail\n", Colour.LIGHT_RED)
-		setups = [['Name','Easting','Northing','Elevation','Height','Backsight','Shots']]
+		if source['type'] == 'total_station':
+			print_coordinates(source)
+			print_stations(source)
+			print_control(control)
+			radials = print_radials(source,control)
 
-		for setup in source['setup']:
-			setups.append([
-				setup.get('station'),
-				setup.get('station_easting'),
-				setup.get('station_northing'),
-				setup.get('station_elevation'),
-				setup.get('instrument_height'),
-				setup.get('backsight'),
-				len(setup.get('shot'))
-			])
+			plot_dxf(radials,100,pathlib.Path(argument).with_suffix('.dxf'))
+			os.system("start %s " % pathlib.Path(argument).with_suffix('.dxf'))
 
-		colour.print(tabulate(setups, headers='firstrow', floatfmt='.3f'), Colour.RED) #tablefmt="heavy_grid"
-
-		# Shots
-		colour.print("\nSHOTS (Spherical Observations):\nA sample 20 measurements taken from the first setup within this .gsi file\n", Colour.LIGHT_YELLOW)
-		shots = [['Code','Number','Tgt Height','Hz Angle','Vt Angle','Sl Dist']]
-
-		for shot in source['setup'][0]['shot'][:20]:
-			shots.append([
-				shot[1],
-				shot[0],
-				shot[5],
-				shot[4],
-				shot[3],
-				shot[2],
-			])
-
-		colour.print(tabulate(shots, headers='firstrow', floatfmt='.3f'), Colour.YELLOW) #tablefmt="heavy_grid"
-
-		# Calculated Coordinates
-		colour.print("\nCOORDS (Derived Cartesian Coordinates):\nA sample 20 measurements with reduced coordinated x, y, and z using the project control\n", Colour.LIGHT_GREEN)
-		shots = [['Code','Number','Tgt H','Azimuth','Setup Hgt','x','y','z']]
-
-		amb1 = (control[1][1],control[1][2],control[1][3])
-		amb2 = (control[2][1],control[2][2],control[2][3])
-
-		control_phi = cartesian_to_spherical(amb1,amb2)
-
-		for shot in source['setup'][0]['shot'][:20]:
-			working_phi = (
-				horizontal_to_azimuth(shot[4])
-				- horizontal_to_azimuth(dms_to_decimal("4305380"))
-				+ control_phi[2] ) % 360
-
-			x,y,z = spherical_to_cartesian(shot[2],shot[3],working_phi,amb1)
-
-			# adjust for station height and target height
-			z += source['setup'][0]['instrument_height']
-			z -= shot[5]
-
-
-			shots.append([
-				shot[1], #code
-				shot[0], #num
-				shot[5], #tgt_h
-				working_phi, #az
-				source['setup'][0]['instrument_height'], #ins_h
-				x,
-				y,
-				z
-			])
-
-		colour.print(tabulate(shots, headers='firstrow', floatfmt='.3f'), Colour.GREEN) #tablefmt="heavy_grid"
-
-	# End of Program Newline
-	print("\nThe End\n")
+	# End of Program
+	print("\n")
