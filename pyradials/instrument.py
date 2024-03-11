@@ -1,6 +1,7 @@
 '''opens instrument file and parses them into a tidy list of setups and measurements'''
 import pathlib
 from leica import gsi
+from gps import load_and_average_gps_csv_file
 
 def filename_details(fn: str):
 	''' returns stem and ext for a given filepath '''
@@ -23,20 +24,37 @@ def instrument_file_as_source(full_fn:str, debug_json_output:bool = False):
 			# * in first position equals 16-bit
 			if first_line[0] == '*':
 				gsi_bit_depth = 16
-				source = gsi(full_fn, gsi_bit_depth, debug_json_output)
+				data = gsi(full_fn, gsi_bit_depth, debug_json_output)
+				source = {
+					'file_name': stem + suffix,
+					'format': 'Leica Geosystems 16-bit GSI (Geo Serial Interface)',
+					'capture_date_time': data[0]['date_time'],
+					'type': 'radials',
+					'data': data,
+				}
 
 			else:
 				gsi_bit_depth = 8
 				raise Exception('8-bit Leica .GSI Not Supported')
 
-		case "r25":  # Carlson RW5
+		case ".r25":  # Carlson RW5
 			raise Exception('Carlson RW5 Not Supported')
 
-		case "raw":  # Trimble 1
+		case ".raw":  # Trimble 1
 			raise Exception('Trimble RAW Not Supported')
 
-		case "are":  # Trimble 1
+		case ".are":  # Trimble 1
 			raise Exception('Trimble ARE Not Supported')
+
+		case ".csv": # GPS Survey Data
+			data = load_and_average_gps_csv_file(full_fn)
+			source = {
+				'file_name': stem + suffix,
+				'format': 'RTK/GNSS Position Data: CSV Format',
+				'capture_date_time': None,
+				'type': 'gps',
+				'data': data
+			}
 
 		case _:
 			raise Exception('Unknown File Type')
