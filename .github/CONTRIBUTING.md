@@ -17,7 +17,7 @@ This project welcomes contributions of all types. Please feel welcome to get inv
 - Try to follow the "one-file-per-commit" rule
 
 ## Actions
-- No actions are used by this repository
+- There is a Github workflow which is triggered on a Pull Request that runs `pylint` (a Python Static Code Analyser) to ensure code conforms to the PEP8 standards
 
 ## Projects
 - No Projects are used by this repository

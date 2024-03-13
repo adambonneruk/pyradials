@@ -106,6 +106,9 @@ pyinstaller 'pyradials/pyradials.spec' --noconfirm
 makensis 'installer/pyradials.nsi'
 ```
 
+## CI
+There is a Github workflow which is triggered on a Pull Request that runs `pylint` (a Python Static Code Analyser) to ensure code conforms to the PEP8 standard.
+
 ## Contributing to this Project
 This project welcomes contributions of all types. We ask that before you start work on a feature that you would like to contribute, please read the [Contributor's Guide](.github/CONTRIBUTING.md).
 
