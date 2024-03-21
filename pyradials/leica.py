@@ -101,7 +101,7 @@ def gsi_to_blocks_list(fn:str, bit_depth:int = 16, debug_json_output = False) ->
 	list_of_blocks = []
 	# Named Tuples
 	Setup = namedtuple("Setup","type station w84 w85 w86 w88 w79 raw")
-	Code = namedtuple("Code","type code w45 w48 raw")
+	Code = namedtuple("Code","type code w42 w43 w44 w45 w46 w47 w48 w49 raw")
 	Measurement = namedtuple("Measurement","type point_id w21 w22 w31 w87 w81 w82 w83 date_time raw")
 
 	for row in gsi_file_reader:
@@ -132,8 +132,14 @@ def gsi_to_blocks_list(fn:str, bit_depth:int = 16, debug_json_output = False) ->
 			logging.debug("this block is a code")
 			code = Code("code",
 				intermediate_dict.get('41'),
+				intermediate_dict.get('42'),
+				intermediate_dict.get('43'),
+				intermediate_dict.get('44'),
 				intermediate_dict.get('45'),
+				intermediate_dict.get('46'),
+				intermediate_dict.get('47'),
 				intermediate_dict.get('48'),
+				intermediate_dict.get('49'),
 				words,
 			)
 			list_of_blocks.append(code)
@@ -173,15 +179,9 @@ def check_integrity_of_setup(setup_block,ro_code_block,ro_measurement) -> None:
 	if ro_measurement.type != "measurement":
 		raise Exception('ro is missing the measurement' + str(setup_block))
 
-def combine_strings(str1:str , str2:str) -> str:
-	if str1 is not None and str2 is not None:
-		return f"{str1},{str2}"
-	elif str1 is not None:
-		return str1
-	elif str2 is not None:
-		return str2
-	else:
-		return None
+def combine_strings(*args):
+	filtered_args = [str(arg) for arg in args if arg not in (None, '', '0', 0, '.', '>')]
+	return ', '.join(filtered_args)
 
 def reduce_and_code_measurements(gsi_blocks:list , debug_json_output:bool = False) -> dict:
 
@@ -208,7 +208,7 @@ def reduce_and_code_measurements(gsi_blocks:list , debug_json_output:bool = Fals
 
 			case "code":
 				recent_code = block.code
-				recent_attrib = combine_strings(block.w45,block.w48)
+				recent_attrib = combine_strings(block.w42,block.w43,block.w44,block.w45,block.w46,block.w47,block.w48,block.w49)
 
 			case "measurement":
 				coded_measurement = Coded_Measurement(
@@ -245,6 +245,6 @@ def gsi(fn:str, bit_depth:int, debug_json_output:bool = False) -> list:
 
 if __name__ == "__main__":
 	#data = main('data/OFFICE.GSI',16,True)
-	data = gsi('data/SPORTRD1.GSI',16,True)
-	print(data)
+	data = gsi('data/SOUTHPOR.GSI',16,True)
+	#print(data)
 
