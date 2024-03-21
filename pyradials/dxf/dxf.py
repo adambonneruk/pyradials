@@ -1,54 +1,7 @@
 '''dxf.py stores functions relating to processing, plotting, drawing and finally saving a .dxf file'''
-import ezdxf
-from ezdxf import zoom
-
-layers = [
-	# name, colour, line style
-	['bg_walls',4,'Continuous'],
-	['bg_walls_partition',3,'Continuous'],
-	['buildings',5,'Continuous'],
-	['control',1,'Continuous'],
-	['doors',252,'Continuous'],
-	['fences_gates',1,'DASHDOT'],
-	['internal_furniture',122,'Continuous'],
-	['kitchen_furniture',122,'Continuous'],
-	['levels',0,'Continuous'],
-	['lighting',2,'Continuous'],
-	['no_access',252,'Continuous'],
-	['oh_beams',41,'DASHED'],
-	['radiators',3,'Continuous'],
-	['radials',247,'Continuous'],
-	['points',115,'Continuous'],
-	['sanitary',11,'Continuous'],
-	['services',4,'Continuous'],
-	['skylights',161,'DASHED'],
-	['steps_stairs',124,'Continuous'],
-	['tanks',51,'Continuous'],
-	['text',6,'Continuous'],
-	['text_surface',30,'Continuous'],
-	['titleblock',0,'Continuous'],
-	['viewports',0,'Continuous'],
-	['windows',0,'Continuous'],
-]
-
-code_properties = {
-		# layer, p/l/b, height code
-		"RO":["control","block",None],
-		"PW":["bg_walls","line",None],
-		"WL":["buildings","line",None],
-		"CC":["oh_beams","line",None],
-		"FCL":["text","point","CL"],
-		"LINT":["text","point","L"],
-		"SILL":["text","point","S"],
-		"WIN":["windows","line",None],
-		"FFL":["text","point","FL"],
-		"DH":["text","point","DH"],
-		"DW":["text","line",None],
-		"LS":["levels","line",None],
-		"LIG":["lighting","point",None],
-		"RAD":["radiators","line",None],
-		"WT":["kitchen_furniture","line","WT"] #guess for worktop
-	}
+import ezdxf; from ezdxf import zoom
+from pyradials.dxf.plot_ref import layers
+from plot_ref import code_table, layers
 
 def code_property(instrument_code:str, property:str, attrib:str = None) -> str:
 	if instrument_code in code_properties:
@@ -59,7 +12,7 @@ def code_property(instrument_code:str, property:str, attrib:str = None) -> str:
 			case "label": return label
 
 	elif instrument_code == "Z": # special case for Z as we want to pass through the comma detail
-		print("found a z with an attrib of %s" % attrib)
+		#print("found a z with an attrib of %s" % attrib)
 		match property:
 			case "layer": return 0
 			case "type": return "point"
@@ -147,7 +100,7 @@ def plot_dxf(c_x_y_z:list,stations:list,scale:int,filename:str) -> None:
 
 	for pid, code, x, y, z, attrib, sx, sy, sz, ih in c_x_y_z:
 
-		print(c_x_y_z)
+		#print(c_x_y_z)
 
 		# Add a point at the specified coordinate.
 		point = (x, y, z)
