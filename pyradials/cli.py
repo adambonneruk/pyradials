@@ -113,7 +113,14 @@ def print_radials(source,control) -> list:
 
 		for shot in setup['coded_measurements']:
 
-			i = horizontal_to_azimuth(shot.hz) # angle of shot from 0
+			# fix for a RO done backwards
+			if setup['coded_measurements'][0].vt > 180:
+				shot_angle = shot.hz + 180 % 360
+			else:
+				shot_angle = shot.hz
+
+			# subtract the instruments angle (j) to get a 0, then add the real RO angle (k) and the shot angle (i)
+			i = horizontal_to_azimuth(shot_angle) # angle of shot from 0
 			j = horizontal_to_azimuth(setup['coded_measurements'][0].hz) # angle of ro from 0
 			k = ro_azimuth # angle of ro from actual 0
 
