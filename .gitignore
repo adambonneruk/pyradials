@@ -10,6 +10,8 @@ pyradials/research/
 sample_data/
 software/
 tools/
+font/
+debug/
 *.json
 
 # NSIS Installer

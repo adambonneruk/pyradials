@@ -7,9 +7,10 @@ from datetime import datetime
 from cli import banner, draw_nice_line, print_gps, print_coordinates, print_stations, print_radials, print_control
 from instrument import instrument_file_as_source
 from calc import spherical_to_cartesian, dms_to_decimal, cartesian_to_spherical, horizontal_to_azimuth
-from dxf import plot_dxf
 from colour import Colour
 from control import control
+
+from dxf.plot import draw_dxf
 
 DEBUG_MODE = False
 if DEBUG_MODE:
@@ -85,16 +86,16 @@ def main():
 			print_gps(source)
 
 		if source['type'] == 'total_station':
-			print_coordinates(source)
+			#print_coordinates(source)
 			print_stations(source)
 			print_control(control)
 			radials = print_radials(source,control)
 
 			stations = [[key, *value] for key, value in control.items()]
-			print(stations)
 
-			plot_dxf(radials,stations,100,pathlib.Path(argument).with_suffix('.dxf'))
-			os.system("start %s " % pathlib.Path(argument).with_suffix('.dxf'))
+			draw_dxf(radials,stations,100,pathlib.Path(argument).with_suffix('.dxf'))
+			#os.system("start %s " % pathlib.Path(argument).with_suffix('.dxf'))
+
 
 	# End of Program
 	print("\n")

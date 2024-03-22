@@ -64,6 +64,30 @@ def print_control(control):
 	colour.print(tabulate(stations, headers='firstrow', floatfmt='.3f'), Colour.RED)
 	print('')
 
+def increment_string(s):
+	# Convert the string to a list to make it mutable
+	s = list(s)
+
+	# Start from the end of the string
+	i = len(s) - 1
+	carry = 1  # Initialize carry to 1 to increment the last character
+
+	# Iterate through the string characters from the end to the beginning
+	while i >= 0 and carry:
+		if s[i].isdigit():  # If the character is a digit
+			# Increment the digit and check for carry-over
+			carry, digit = divmod(int(s[i]) + carry, 10)
+			s[i] = str(digit)
+		else:
+			# If the character is not a digit, break the loop
+			break
+		i -= 1
+
+	# If carry is still remaining, prepend '1'
+	if carry:
+		s.insert(0, '1')
+	return ''.join(s)
+
 def print_radials(source,control) -> list:
 	colour.print("== RADIALS ==",Colour.LIGHT_YELLOW)
 	drawing = []
@@ -71,10 +95,15 @@ def print_radials(source,control) -> list:
 	for setup in source['data']:
 		radials = []
 		radials.append(['Point ID','Code','Sd','Vt','Hz','Easting','Northing','Elev','Attrib'])
-		colour.print("-- " + str(setup['station']) + ": ih" + str(setup['height']) + " --",Colour.LIGHT_YELLOW)
+		colour.print("-- " + str(setup['station']) + ", instrument height: " + str(setup['height']) + "m --",Colour.LIGHT_YELLOW)
 
 		station = setup['station']
 		backsight = setup['backsight']
+
+		# if it's the first setup, we won't have a backsight, so let's go find it (typically STN2)
+		if backsight == None:
+			backsight = increment_string(station)
+
 		stn_xyz = control[station]
 		try:
 			bs_xyz = control[backsight]

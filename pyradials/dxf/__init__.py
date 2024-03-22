@@ -1,1 +1,1 @@
-from .dxf import plot_dxf
+from .plot import draw_dxf
