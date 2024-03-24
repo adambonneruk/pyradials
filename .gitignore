@@ -12,6 +12,7 @@ software/
 tools/
 font/
 debug/
+graphics/
 *.json
 
 # NSIS Installer
