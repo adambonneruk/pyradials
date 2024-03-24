@@ -1,5 +1,5 @@
 # PyRadials
-Manage your Survey from _Field to Finish_: Traverse, Reduce, and Plot Lecia TPS1100 .GSI
+Manage your Survey from _Field to Finish_: Traverse, Reduce, and Plot Leica TPS1100 .GSI
 
 ![simple green banner with the pyradials logo and name](./graphics/github_banner.png)
 
