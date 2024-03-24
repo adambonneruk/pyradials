@@ -31,7 +31,7 @@ DULL:int = 252
 code_table = {
     # control, meta, and important
     'RO':['Reference Object','control','block',None],
-    'Z':['Reference Object','control','block',None],
+    'Z':['Reference Object','0','block',None],
 
     # internal and external
     'FE':['Fence','fences_gates','line','FE'],
@@ -71,13 +71,7 @@ code_table = {
     'GE':['Gate','fences_gates','line',''],
     'LS':['Level String','levels','line',''],
     'WL':['Wall','walls','line',''],
-    'TE':['Tree','vegetation','block',None],
-    'TEMG':['Multi-Girth Tree','vegetation','block',None],
-    'STUMP':['Tree Stump','vegetation','block',None],
     'WAT':['Water Level','water_courses','point','WL'],
-    'HE':['Hedge (Center)','vegetation','line',''],
-    'HEF':['Hedge (Face)','vegetation','line',''],
-    'SAP':['Sapling','vegetation','block',None],
     'K':['Kerb','kerb','line',''],
     'KT':['Kerb Top','kerb_top','point',''],
     'RCL':['Road Center Line','road_marking','line',''],
@@ -87,6 +81,14 @@ code_table = {
     'RL':['Ridge Level','level','point','RL'],
     'LP':['Lamp Post','street_furniture','block','LP'],
     'MH':['Manhole (3-Point)','utilities','block','MH'],
+
+    # Trees, Stumps, Saplings, Hedges
+    'TE':['Tree','vegetation','block',None],
+    'TEMG':['Multi-Girth Tree','vegetation','block',None],
+    'STUMP':['Tree Stump','vegetation','block',None],
+    'SAP':['Sapling','vegetation','block',None],
+    'HE':['Hedge (Center)','vegetation','line',''],
+    'HEF':['Hedge (Face)','vegetation','line',''],
 }
 
 # Layer Table, format is {'layer':[colour-code,'line-type']}

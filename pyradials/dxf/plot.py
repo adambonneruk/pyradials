@@ -45,9 +45,11 @@ def draw_dxf(radials,stations,scale:int,filename:str) -> None:
 	prev_coord:float = None
 	prev_setup:float = None
 	radial_colour:int = 226
+	special_labels = ['Z','US']
 
 	# create drawing blocks
 	dxf.shapes.flag(doc)
+	dxf.shapes.tree_canopy(doc)
 
 	# insert control points
 	for name, x, y, z in stations:
@@ -98,9 +100,13 @@ def draw_dxf(radials,stations,scale:int,filename:str) -> None:
 		})
 
 		# height label (with optional prefix)
-		if height_code is not None:
+		if height_code is not None or code in special_labels:
 			text_pos = (x + 0.1, y + 0.0, z)
-			text_string = "{}{:.2f}".format(height_code, z)
+			if code in special_labels:
+				text_string = "{},{}{:.2f}".format(attrib, code, z)
+			else:
+				text_string = "{}{:.2f}".format(height_code, z)
+
 			msp.add_text(text_string, dxfattribs={
 				'height': text_height,
 				'insert': text_pos,
@@ -114,9 +120,62 @@ def draw_dxf(radials,stations,scale:int,filename:str) -> None:
 			prev_code = code
 			prev_coord = (x, y, z)
 
+
+		# if its a block, do custom block behaviour
+		if type == 'block':
+			match code:
+				case 'TE':
+					is_multi_girth, tree_girth, tree_spread = dxf.shapes.tree_splitter(attrib)
+					if is_multi_girth:
+						dxf.shapes.create_mg_tree(doc,str(pid),tree_spread)
+						msp.add_blockref(str(pid), point, dxfattribs={
+							"layer": layer_name
+						})
+						text_string = "TREE MG {:.2f}".format(z)
+					else:
+						dxf.shapes.create_tree(doc,str(pid),tree_spread,tree_girth)
+						msp.add_blockref(str(pid), point, dxfattribs={
+							"layer": layer_name
+						})
+						text_string = "TREE G{:.2f} H{:.2f}".format(tree_girth, z)
+					text_pos = (x + 0.1, y + 0.0, z)
+					msp.add_text(text_string, dxfattribs={
+						'height': text_height,
+						'insert': text_pos,
+						"layer": layer_name
+					})
+				case 'STUMP':
+					stump_radius = float(attrib) / 1000 / 3.14 / 2
+					msp.add_circle(center=point, radius=stump_radius, dxfattribs={
+						"layer": layer_name
+					})
+					text_pos = (x + 0.1, y + 0.0, z)
+					text_string = "STUMP {:.2f}".format(z)
+					msp.add_text(text_string, dxfattribs={
+						'height': text_height,
+						'insert': text_pos,
+						"layer": layer_name
+					})
+				case 'SAP':
+					dxf.shapes.create_sapling_tree(doc,str(pid),tree_spread)
+					msp.add_blockref(str(pid), point, dxfattribs={
+						"layer": layer_name
+					})
+					text_pos = (x + 0.1, y + 0.0, z)
+					text_string = "SAPLING {:.2f}".format(z)
+					msp.add_text(text_string, dxfattribs={
+						'height': text_height,
+						'insert': text_pos,
+						"layer": layer_name
+					})
+					pass
+				case _:
+					pass
+					#print(code)
+
 	# zoom to see the created diagram
 	zoom.extents(msp)
-
+	#raise ValueError("end here")
 	# save the document
 	doc.saveas(filename); print("done")
 
