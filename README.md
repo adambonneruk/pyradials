@@ -1,7 +1,20 @@
-# PyRadials: Field to Finish
-Measure, Traverse, Resection, Control, Convert and Create .DXF for Leica TPS1100 Series .GSI Data
+# PyRadials
+Manage your Survey from _Field to Finish_: Traverse, Reduce, and Plot Lecia TPS1100 .GSI
+
+![simple green banner with the pyradials logo and name](./graphics/github_banner.png)
 
 ## Introduction
+PyRadials (named after the python programming language and a radial; the line between the total station and an observed point) is a hobby project seeking to "democratise the creation of DXF data from TPS1100 series instruments".
+
+![demo showing dxf drawing with radials enabled and then disabled](./docs/images/demo-radials.gif)
+
+The software's versatility extends to its drafting engine, powered by the EZDXF library, enabling the creation of intricate 3D labelled drawings compatible with AutoCAD. From delineating walls and surface changes to plotting spot levels, PyRadials supports a wide range of codes and layers, facilitating detailed topographical and measured building surveys at multiple scales.
+
+### Roadmap
+PyRadials is poised to expand its capabilities with planned integrations like what3words (simplifying locating a station), block support (think trees and toilet icons), and DTM rendering. The aim is to cater to a diverse portfolio of surveying needs.
+
+### I'm interested! what's the catch?
+PyRadials adopts a "free to use, paid support" model, ensuring accessibility while providing avenues for users to obtain assistance and guidance as needed. I'd love you to raise a PR, but if you just need a feature, get in touch and you can prioritise my backlog! Frequent updates are expected in the coming weeks and months.
 
 ### Mathematical Terminology
 
@@ -126,6 +139,9 @@ The following organisations, projects, and people helped make PyRadials happen, 
 - [IcoFx Portable](https://portableapps.com/apps/graphics_pictures/icofx_portable) for Icon file editing
 - [Dymo Label](https://download.dymo.com/dymo/Software/Win/DLS8Setup.8.5.4.exe) v8
 - 
+
+### Font used by this Project
+- [Michroma](https://fonts.google.com/specimen/Michroma) is an open font based on the classic Microgramma utilised by "Star Trek"
 
 ### Hardware Documentation
 - [Manuals for Leica Total Stations](https://tmackinnon.com/manuals-for-the-leica-tps1200-and-tcr1105.php)
